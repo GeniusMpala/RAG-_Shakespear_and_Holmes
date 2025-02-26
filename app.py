@@ -19,6 +19,11 @@ def setup_openai_api():
     if "OPENAI_API_KEY" not in os.environ:
         os.environ["OPENAI_API_KEY"] = getpass("Enter OpenAI API key:")
 
+
+
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
+
 def load_and_prepare_documents(file_path: str):
     with open(file_path, "r", encoding="utf-8") as f:
         text = f.read()
@@ -105,7 +110,7 @@ def create_tool(rag_pipe, persona: str):
 # ---------------------------
 @st.cache_resource(show_spinner=False)
 def initialize_sherlock_pipeline():
-    setup_openai_api()
+    # setup_openai_api()
     # Path to your Sherlock text file
     sherlock_file = "The Adventures of Sherlock Holmes_clean.txt"  
     documents = load_and_prepare_documents(sherlock_file)
@@ -117,7 +122,7 @@ def initialize_sherlock_pipeline():
 
 @st.cache_resource(show_spinner=False)
 def initialize_shakespeare_pipeline():
-    setup_openai_api()
+    # setup_openai_api()
     # Path to your combined Shakespeare text file
     shakespeare_file = "combined_shakespeare.txt"  
     documents = load_and_prepare_documents(shakespeare_file)
