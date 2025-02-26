@@ -16,7 +16,7 @@ from haystack.tools import Tool
 # ---------------------------
 
 def setup_openai_api():
-    os.environ["OPENAI_API_KEY"] = "sk-8a89mfKDk7J0r18tXgaABnDg-1jZhXM2RSG9dPbEFeT3BlbkFJAhIgV0hl9af9Ss1f-3dsN8cXdkfMYPGURpCOYW_AgA"
+    os.environ["OPENAI_API_KEY"] = "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"
 
 
 def load_and_prepare_documents(file_path: str):
