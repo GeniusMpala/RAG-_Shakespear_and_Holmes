@@ -1,6 +1,5 @@
 import streamlit as st
 import os
-from getpass import getpass
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 from haystack.components.writers import DocumentWriter
@@ -12,20 +11,13 @@ from haystack.components.generators.chat import OpenAIChatGenerator
 from haystack.tools import Tool
 
 # ---------------------------
+# Set up OpenAI API key (hard-coded)
+# ---------------------------
+os.environ["OPENAI_API_KEY"] = "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"
+
+# ---------------------------
 # Utility & Pipeline Setup Functions
 # ---------------------------
-
-import os
-import streamlit as st
-from getpass import getpass
-
-def setup_openai_api():
-    try:
-        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-    except KeyError:
-        os.environ["OPENAI_API_KEY"] = getpass("Enter OpenAI API key:")
-
-
 
 def load_and_prepare_documents(file_path: str):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -113,7 +105,6 @@ def create_tool(rag_pipe, persona: str):
 # ---------------------------
 @st.cache_resource(show_spinner=False)
 def initialize_sherlock_pipeline():
-    setup_openai_api()
     # Path to your Sherlock text file
     sherlock_file = "The Adventures of Sherlock Holmes_clean.txt"  
     documents = load_and_prepare_documents(sherlock_file)
@@ -125,7 +116,6 @@ def initialize_sherlock_pipeline():
 
 @st.cache_resource(show_spinner=False)
 def initialize_shakespeare_pipeline():
-    setup_openai_api()
     # Path to your combined Shakespeare text file
     shakespeare_file = "combined_shakespeare.txt"  
     documents = load_and_prepare_documents(shakespeare_file)
