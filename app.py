@@ -15,13 +15,16 @@ from haystack.tools import Tool
 # Utility & Pipeline Setup Functions
 # ---------------------------
 
+import os
+import streamlit as st
+from getpass import getpass
+
 def setup_openai_api():
-    if "OPENAI_API_KEY" not in os.environ:
+    try:
+        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+    except KeyError:
         os.environ["OPENAI_API_KEY"] = getpass("Enter OpenAI API key:")
 
-
-
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 
 def load_and_prepare_documents(file_path: str):
@@ -110,7 +113,7 @@ def create_tool(rag_pipe, persona: str):
 # ---------------------------
 @st.cache_resource(show_spinner=False)
 def initialize_sherlock_pipeline():
-    # setup_openai_api()
+    setup_openai_api()
     # Path to your Sherlock text file
     sherlock_file = "The Adventures of Sherlock Holmes_clean.txt"  
     documents = load_and_prepare_documents(sherlock_file)
@@ -122,7 +125,7 @@ def initialize_sherlock_pipeline():
 
 @st.cache_resource(show_spinner=False)
 def initialize_shakespeare_pipeline():
-    # setup_openai_api()
+    setup_openai_api()
     # Path to your combined Shakespeare text file
     shakespeare_file = "combined_shakespeare.txt"  
     documents = load_and_prepare_documents(shakespeare_file)
