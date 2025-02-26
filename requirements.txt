@@ -1,0 +1,6 @@
+streamlit
+haystack-ai
+sentence-transformers
+torch
+transformers
+openai
