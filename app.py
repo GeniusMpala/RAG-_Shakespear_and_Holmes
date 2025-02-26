@@ -179,9 +179,9 @@ if st.button("Next Turn"):
     st.session_state.conversation = next_turn(
         st.session_state.conversation, sherlock_tool, shakespeare_tool
     )
-    st.experimental_rerun()
+    st.rerun()
 
 # Button to reset conversation.
 if st.button("Reset Conversation"):
     st.session_state.conversation = initialize_conversation()
-    st.experimental_rerun()
+    st.rerun()
