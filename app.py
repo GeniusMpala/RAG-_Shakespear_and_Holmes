@@ -1,5 +1,8 @@
 import streamlit as st
 import os
+import asyncio
+import tempfile
+import pyttsx3
 from getpass import getpass
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
@@ -12,17 +15,67 @@ from haystack.components.generators.chat import OpenAIChatGenerator
 from haystack.tools import Tool
 
 # ---------------------------
+# Ensure an asyncio event loop is running
+# ---------------------------
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    async def init_async():
+        return
+    loop.run_until_complete(init_async())
+
+# ---------------------------
+# Initialize pyttsx3 and set up voices for each character
+# ---------------------------
+engine = pyttsx3.init()
+voices = engine.getProperty('voices')
+# Map characters to specific voice IDs. Adjust indices based on your system.
+character_voices = {
+    "Sherlock Holmes": voices[0].id if voices else None,
+    "William Shakespeare": voices[1].id if len(voices) > 1 else (voices[0].id if voices else None),
+}
+
+def generate_audio(character, text):
+    """
+    Generate audio using pyttsx3 for the given character and text.
+    Returns the audio bytes in WAV format.
+    """
+    # Set voice for the character if available, otherwise default to the first voice.
+    if character in character_voices and character_voices[character]:
+        engine.setProperty('voice', character_voices[character])
+    else:
+        engine.setProperty('voice', voices[0].id)
+    
+    # Reduce the voice speed by setting a lower rate (default is typically around 200)
+    engine.setProperty('rate', 150)  # Adjust this value to further reduce or increase speed
+    
+    # Create a temporary file for the audio output
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+        tmp_filename = f.name
+    
+    engine.save_to_file(text, tmp_filename)
+    engine.runAndWait()  # Wait for the speech synthesis to complete
+    
+    # Read the audio data from the file and then remove it
+    with open(tmp_filename, "rb") as f:
+        audio_bytes = f.read()
+    os.remove(tmp_filename)
+    return audio_bytes
+
+# ---------------------------
 # Utility & Pipeline Setup Functions
 # ---------------------------
-
 def setup_openai_api():
-    os.environ["OPENAI_API_KEY"] = "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"
-
+    if "OPENAI_API_KEY" not in os.environ:
+        # Replace with your API key or use getpass to securely input it.
+        os.environ["OPENAI_API_KEY"] = "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"
 
 def load_and_prepare_documents(file_path: str):
     with open(file_path, "r", encoding="utf-8") as f:
         text = f.read()
-    # Split into chunks on double newlines and remove empty chunks.
+    # Split on double newlines and remove any empty chunks.
     documents = [Document(content=chunk.strip()) for chunk in text.split("\n\n") if chunk.strip()]
     # Deduplicate documents by ID.
     unique_documents = list({doc.id: doc for doc in documents}.values())
@@ -46,7 +99,6 @@ def build_indexing_pipeline(document_store, documents, model="sentence-transform
     return pipeline
 
 def build_rag_pipeline(document_store, persona_prompt: str, text_embedder_model="sentence-transformers/all-MiniLM-L6-v2", llm_model="gpt-4o-mini"):
-    # Create a prompt template using the persona instructions.
     template = [
         ChatMessage.from_system(
             f"""
@@ -89,7 +141,6 @@ def create_tool(rag_pipe, persona: str):
         },
         "required": ["query"],
     }
-    # Wrap the RAG function.
     def tool_function(query: str):
         return {"reply": rag_pipeline_func(query, rag_pipe)}
     
@@ -130,26 +181,25 @@ def initialize_shakespeare_pipeline():
 # ---------------------------
 # Conversation Logic
 # ---------------------------
+def initialize_conversation(topic: str = None):
+    if topic:
+        initial_message = f"Let's discuss {topic}. What are your thoughts?"
+    else:
+        initial_message = "Good day. Who might you be?"
+    return [("Sherlock Holmes", initial_message)]
+
 def get_reply(tool, query):
-    # Call the tool function with the query.
     result = tool.function(query)
     return result["reply"]
 
-def initialize_conversation():
-    # Start conversation with an initial message from Sherlock.
-    return [("Sherlock Holmes", "Good day. Who might you be?")]
-
 def next_turn(conversation, sherlock_tool, shakespeare_tool):
-    # Determine the last speaker and route the query to the other persona.
     last_speaker, last_message = conversation[-1]
     if last_speaker == "Sherlock Holmes":
         next_speaker = "William Shakespeare"
-        # Use Sherlock's message as query for Shakespeare.
         query = last_message
         reply = get_reply(shakespeare_tool, query)
     else:
         next_speaker = "Sherlock Holmes"
-        # Use Shakespeare's message as query for Sherlock.
         query = last_message
         reply = get_reply(sherlock_tool, query)
     conversation.append((next_speaker, reply))
@@ -158,30 +208,63 @@ def next_turn(conversation, sherlock_tool, shakespeare_tool):
 # ---------------------------
 # Streamlit App
 # ---------------------------
-st.title("Conversational RAG: Sherlock Holmes vs. William Shakespeare")
-st.write("This app deploys two RAG pipelines in distinct personas. They converse with each other autonomously.")
+# -- Show both characters' images side by side at the top
+top_cols = st.columns(2)
+with top_cols[0]:
+    st.image("sherlock_face.png", caption="Sherlock Holmes", width=200)
+with top_cols[1]:
+    st.image("shakespeare_face.png", caption="William Shakespeare", width=200)
+
+
+st.title("Sherlock Holmes vs. William Shakespeare")
+# st.write("This app deploys two RAG pipelines in distinct personas that converse on a topic of your choice with voice output using pyttsx3.")
+
+# Sidebar inputs for topic and enabling voice
+topic = st.sidebar.text_input("Enter a topic for conversation", value="technology")
+voice_enabled = st.sidebar.checkbox("Enable Voice", value=True)
+if st.sidebar.button("Reset Conversation with Topic"):
+    st.session_state.conversation = initialize_conversation(topic)
+    st.rerun()
 
 # Load or initialize pipelines (cached)
 sherlock_tool = initialize_sherlock_pipeline()
 shakespeare_tool = initialize_shakespeare_pipeline()
 
-# Initialize conversation in session state if not present.
 if "conversation" not in st.session_state:
-    st.session_state.conversation = initialize_conversation()
+    st.session_state.conversation = initialize_conversation(topic)
 
-# Display conversation history
+# Define image paths for each persona (adjust file paths as needed)
+persona_images = {
+    "Sherlock Holmes": "sherlock_face.png",
+    "William Shakespeare": "shakespeare_face.png"
+}
+
 st.markdown("### Conversation History")
 for speaker, message in st.session_state.conversation:
-    st.markdown(f"**{speaker}:** {message}")
+    cols = st.columns([1, 5])
+    with cols[0]:
+        if speaker in persona_images:
+            st.image(persona_images[speaker], width=64)
+        else:
+            st.write("")
+    with cols[1]:
+        st.markdown(f"""<div style="padding:10px; background-color: #000000; border-radius:10px;">
+            <strong>{speaker}:</strong> {message}
+            </div>""", unsafe_allow_html=True)
 
-# Button to continue the conversation.
+# Play voice for the latest message if voice is enabled.
+if voice_enabled:
+    last_speaker, last_message = st.session_state.conversation[-1]
+    st.markdown("**Voice Output:**")
+    audio_bytes = generate_audio(last_speaker, last_message)
+    st.audio(audio_bytes, format="audio/wav")
+
 if st.button("Next Turn"):
     st.session_state.conversation = next_turn(
         st.session_state.conversation, sherlock_tool, shakespeare_tool
     )
     st.rerun()
 
-# Button to reset conversation.
-if st.button("Reset Conversation"):
-    st.session_state.conversation = initialize_conversation()
-    st.rerun()
+
+
+
