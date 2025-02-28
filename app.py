@@ -136,7 +136,7 @@ Answer:
     rag_pipe.add_component("embedder", SentenceTransformersTextEmbedder(model=text_embedder_model))
     rag_pipe.add_component("retriever", InMemoryEmbeddingRetriever(document_store=document_store))
     rag_pipe.add_component("prompt_builder", ChatPromptBuilder(template=template))
-    rag_pipe.add_component("llm", OpenAIChatGenerator(model=llm_model, max_tokens=token_limit))
+    rag_pipe.add_component("llm", OpenAIChatGenerator(model=llm_model)) #, max_tokens=token_limit))
     
     rag_pipe.connect("embedder.embedding", "retriever.query_embedding")
     rag_pipe.connect("retriever", "prompt_builder.documents")
