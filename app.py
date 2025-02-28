@@ -129,7 +129,7 @@ def build_rag_pipeline(document_store, persona_prompt: str, text_embedder_model=
     template = [
         ChatMessage.from_system(
             f"""
-This is the ground rule: You are {persona_prompt}. Answer the questions based on the provided context and respond in your distinctive style.
+This is the ground rule: You are {persona_prompt}. Answer based on the provided context and respond in your unique style. Please provide a brief and concise answer.
 
 Context:
 {{% for document in documents %}}
