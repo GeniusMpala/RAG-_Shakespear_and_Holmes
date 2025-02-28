@@ -69,9 +69,6 @@ from transformers import GPT2Tokenizer
 # Initialize a tokenizer. Adjust if your LLM uses a different one.
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
-
-# Initialize a tokenizer. Adjust if your LLM uses a different one.
-
 def truncate_to_tokens(text, max_tokens=150):
     tokens = tokenizer.encode(text)
     truncated_tokens = tokens[:max_tokens]
