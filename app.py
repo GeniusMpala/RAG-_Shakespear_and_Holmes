@@ -67,30 +67,46 @@ def generate_audio(character, text):
     Generate audio using pyttsx3 for the given character and text.
     Returns the audio bytes in WAV format, or None if TTS is unavailable.
     """
-    if engine is None:
+    import pyttsx3
+    try:
+        # Create a new engine instance for each call
+        local_engine = pyttsx3.init()
+        
+        voices = local_engine.getProperty('voices')
+        # Adjust these indices to match your environment
+        character_voices = {
+            "Sherlock Holmes": voices[0].id if voices else None,
+            "William Shakespeare": voices[1].id if len(voices) > 1 else (voices[0].id if voices else None),
+        }
+
+        # Set the voice
+        if character in character_voices and character_voices[character]:
+            local_engine.setProperty('voice', character_voices[character])
+        else:
+            local_engine.setProperty('voice', voices[0].id)
+        
+        # Adjust speech rate
+        local_engine.setProperty('rate', 150)
+
+        import tempfile, os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+            tmp_filename = f.name
+
+        local_engine.save_to_file(text, tmp_filename)
+        local_engine.runAndWait()
+
+        with open(tmp_filename, "rb") as f:
+            audio_bytes = f.read()
+        os.remove(tmp_filename)
+
+        # Clean up the engine
+        local_engine.stop()
+        return audio_bytes
+
+    except Exception as e:
+        st.warning(f"Text-to-speech failed: {e}")
         return None
 
-    # Set voice for the character if available, otherwise default to the first voice.
-    if character in character_voices and character_voices[character]:
-        engine.setProperty('voice', character_voices[character])
-    else:
-        engine.setProperty('voice', voices[0].id)
-    
-    # Reduce the voice speed by setting a lower rate (default is typically around 200)
-    engine.setProperty('rate', 150)  # Adjust as needed
-    
-    # Create a temporary file for the audio output
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-        tmp_filename = f.name
-
-    engine.save_to_file(text, tmp_filename)
-    engine.runAndWait()  # Wait for speech synthesis to complete
-    
-    # Read the audio data from the file and then remove it
-    with open(tmp_filename, "rb") as f:
-        audio_bytes = f.read()
-    os.remove(tmp_filename)
-    return audio_bytes
 
 # ---------------------------
 # Utility & Pipeline Setup Functions
