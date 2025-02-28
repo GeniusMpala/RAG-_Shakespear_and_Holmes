@@ -95,11 +95,18 @@ def generate_audio(character, text):
 def load_and_prepare_documents(file_path: str):
     with open(file_path, "r", encoding="utf-8") as f:
         text = f.read()
-    # Split on double newlines and remove any empty chunks.
-    documents = [Document(content=chunk.strip()) for chunk in text.split("\n\n") if chunk.strip()]
-    # Deduplicate documents by ID.
+    documents = []
+    for chunk in text.split("\n\n"):
+        content = chunk.strip()
+        if content:
+            # Split the content into tokens (words) and take the first 150 tokens.
+            tokens = content.split()
+            truncated_content = " ".join(tokens[:150])
+            documents.append(Document(content=truncated_content))
+    # Deduplicate documents by ID (if needed)
     unique_documents = list({doc.id: doc for doc in documents}.values())
     return unique_documents
+
 
 def initialize_document_store():
     return InMemoryDocumentStore()
