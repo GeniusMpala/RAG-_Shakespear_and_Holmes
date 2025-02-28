@@ -208,6 +208,18 @@ def initialize_conversation(topic: str = None):
 def get_reply(tool, query):
     result = tool.function(query)
     return result["reply"]
+    
+
+def generate_audio(character, text):
+    try:
+        tts = gTTS(text)
+        mp3_buffer = io.BytesIO()
+        tts.write_to_fp(mp3_buffer)
+        mp3_buffer.seek(0)
+        return mp3_buffer.read()
+    except Exception as e:
+        st.warning(f"Text-to-speech failed: {e}")
+        return None
 
 def next_turn(conversation, sherlock_tool, shakespeare_tool):
     last_speaker, last_message = conversation[-1]
