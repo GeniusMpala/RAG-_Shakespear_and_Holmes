@@ -115,7 +115,8 @@ def build_indexing_pipeline(document_store, documents, model="sentence-transform
     pipeline.run({"doc_embedder": {"documents": documents}})
     return pipeline
 
-def build_rag_pipeline(document_store, persona_prompt: str, text_embedder_model="sentence-transformers/all-MiniLM-L6-v2", llm_model="gpt-4o-mini"):
+def build_rag_pipeline(document_store, persona_prompt: str, token_limit: int = 150,  text_embedder_model="sentence-transformers/all-MiniLM-L6-v2", llm_model="gpt-4o-mini"):
+    
     template = [
         ChatMessage.from_system(
             f"""
