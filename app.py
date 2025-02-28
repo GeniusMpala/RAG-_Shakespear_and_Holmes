@@ -235,8 +235,6 @@ with top_cols[0]:
 with top_cols[1]:
     st.image("shakespeare_face.png", caption="William Shakespeare", width=200)
 
-st.write("FileWatcherType is set to:", os.environ.get("STREAMLIT_SERVER_FILEWATCHERTYPE"))
-
 st.title("Sherlock Holmes vs. William Shakespeare")
 # st.write("This app deploys two RAG pipelines in distinct personas that converse on a topic of your choice with voice output using pyttsx3.")
 
