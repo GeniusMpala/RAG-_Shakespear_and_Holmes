@@ -68,40 +68,52 @@ def generate_audio(character, text):
     Returns the audio bytes in WAV format, or None if TTS is unavailable.
     """
     import pyttsx3
+    import tempfile
+    import os
+
     try:
-        # Create a new engine instance for each call
+        # Create a new engine each time
         local_engine = pyttsx3.init()
-        
+
+        # Get available voices
         voices = local_engine.getProperty('voices')
-        # Adjust these indices to match your environment
+
+        # Map characters to specific voice IDs (adjust indices as needed)
         character_voices = {
             "Sherlock Holmes": voices[0].id if voices else None,
             "William Shakespeare": voices[1].id if len(voices) > 1 else (voices[0].id if voices else None),
         }
 
-        # Set the voice
+        # Set the desired voice if available
         if character in character_voices and character_voices[character]:
             local_engine.setProperty('voice', character_voices[character])
         else:
             local_engine.setProperty('voice', voices[0].id)
-        
+
         # Adjust speech rate
         local_engine.setProperty('rate', 150)
 
-        import tempfile, os
+        # Create a temporary file for the audio output
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
             tmp_filename = f.name
 
         local_engine.save_to_file(text, tmp_filename)
-        local_engine.runAndWait()
+        local_engine.runAndWait()  # Blocks until synthesis is complete
 
+        # Read the audio data from the file, then remove the temp file
         with open(tmp_filename, "rb") as f:
             audio_bytes = f.read()
         os.remove(tmp_filename)
 
-        # Clean up the engine
+        # Clean up the local engine
         local_engine.stop()
+
         return audio_bytes
+
+    except Exception as e:
+        st.warning(f"Text-to-speech failed: {e}")
+        return None
+
 
     except Exception as e:
         st.warning(f"Text-to-speech failed: {e}")
