@@ -6,3 +6,5 @@ transformers
 openai
 pyttsx3
 gTTS
+qrcode
+Pillow
