@@ -41,6 +41,10 @@ from haystack.components.builders import ChatPromptBuilder
 from haystack.dataclasses import ChatMessage
 from haystack.components.generators.chat import OpenAIChatGenerator
 from haystack.tools import Tool
+import qrcode
+import time
+import urllib.parse
+from io import BytesIO
 
 # ---------------------------
 # Ensure an asyncio event loop is running
@@ -81,6 +85,22 @@ def truncate_to_tokens(text, max_tokens=150):
 # ---------------------------
 # Utility & Pipeline Setup Functions
 # ---------------------------
+
+def generate_qr_code(url: str) -> BytesIO:
+    # Generate the QR code image from the given URL
+    qr_img = qrcode.make(url)
+    # Save the QR code image to a bytes buffer in PNG format
+    buf = BytesIO()
+    qr_img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+def get_time_limited_url(base_url: str, valid_duration: int = 7200) -> str:
+    expiry_time = int(time.time()) + valid_duration  # current time + valid duration in seconds
+    params = {"expiry": expiry_time}
+    # Append the query parameters to the base URL
+    return f"{base_url}?{urllib.parse.urlencode(params)}"
+
 
 
 def load_and_prepare_documents(file_path: str):
@@ -280,6 +300,19 @@ for speaker, message in st.session_state.conversation:
         st.markdown(f"""<div style="padding:10px; background-color: #000000; border-radius:10px;">
             <strong>{speaker}:</strong> {message}
             </div>""", unsafe_allow_html=True)
+
+base_app_url = "https://rag-shakespearandholmes-jrantpqwhfwipsgfnvzrqs.streamlit.app/"
+# Button to access the app
+if st.sidebar.button("Access the App"):
+    # Generate a time-limited URL
+    time_limited_url = get_time_limited_url(base_app_url)
+    # Generate the QR code for the time-limited URL
+    qr_buffer = generate_qr_code(time_limited_url)
+    st.markdown("### Scan the QR Code to Access the App for a Minute")
+    st.image(qr_buffer, caption="Time-limited access QR code!")
+
+
+
 
 # Play voice for the latest message if voice is enabled.
 if voice_enabled:
