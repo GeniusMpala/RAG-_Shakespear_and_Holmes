@@ -7,8 +7,6 @@ if "env_vars" in st.secrets:
     for key, value in st.secrets["env_vars"].items():
         os.environ[key] = value
 
-
-import asyncio
 import tempfile
 import pyttsx3
 from getpass import getpass
@@ -26,14 +24,6 @@ from haystack.tools import Tool
 
 
 
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    async def init_async():
-        return
-    loop.run_until_complete(init_async())
 
 # ---------------------------
 # Initialize pyttsx3 and set up voices for each character
