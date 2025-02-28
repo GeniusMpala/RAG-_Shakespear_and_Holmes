@@ -29,6 +29,8 @@ except RuntimeError as e:
     voices = []
     character_voices = {}
 
+from gtts import gTTS
+import io
 from getpass import getpass
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
@@ -62,62 +64,29 @@ def setup_openai_api():
         else:
             st.error("Missing OpenAI API Key in environment variables. Please add it to your Streamlit Secrets.")
 
+
+
 def generate_audio(character, text):
     """
-    Generate audio using pyttsx3 for the given character and text.
-    Returns the audio bytes in WAV format, or None if TTS is unavailable.
+    Generate audio using gTTS (Google Text-to-Speech) for the given character and text.
+    Returns MP3 audio bytes.
     """
-    import pyttsx3
-    import tempfile
-    import os
-
     try:
-        # Create a new engine each time
-        local_engine = pyttsx3.init()
+        # Create gTTS object
+        tts = gTTS(text)
 
-        # Get available voices
-        voices = local_engine.getProperty('voices')
+        # Write to an in-memory buffer (BytesIO)
+        mp3_buffer = io.BytesIO()
+        tts.write_to_fp(mp3_buffer)
+        mp3_buffer.seek(0)
 
-        # Map characters to specific voice IDs (adjust indices as needed)
-        character_voices = {
-            "Sherlock Holmes": voices[0].id if voices else None,
-            "William Shakespeare": voices[1].id if len(voices) > 1 else (voices[0].id if voices else None),
-        }
-
-        # Set the desired voice if available
-        if character in character_voices and character_voices[character]:
-            local_engine.setProperty('voice', character_voices[character])
-        else:
-            local_engine.setProperty('voice', voices[0].id)
-
-        # Adjust speech rate
-        local_engine.setProperty('rate', 150)
-
-        # Create a temporary file for the audio output
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-            tmp_filename = f.name
-
-        local_engine.save_to_file(text, tmp_filename)
-        local_engine.runAndWait()  # Blocks until synthesis is complete
-
-        # Read the audio data from the file, then remove the temp file
-        with open(tmp_filename, "rb") as f:
-            audio_bytes = f.read()
-        os.remove(tmp_filename)
-
-        # Clean up the local engine
-        local_engine.stop()
-
-        return audio_bytes
+        # Return raw MP3 bytes
+        return mp3_buffer.read()
 
     except Exception as e:
         st.warning(f"Text-to-speech failed: {e}")
         return None
 
-
-    except Exception as e:
-        st.warning(f"Text-to-speech failed: {e}")
-        return None
 
 
 # ---------------------------
@@ -310,9 +279,10 @@ if voice_enabled:
     st.markdown("**Voice Output:**")
     audio_bytes = generate_audio(last_speaker, last_message)
     if audio_bytes:
-        st.audio(audio_bytes, format="audio/wav")
+        st.audio(audio_bytes, format="audio/mp3")
     else:
         st.write("Voice output unavailable.")
+
 
 if st.button("Next Turn"):
     st.session_state.conversation = next_turn(
