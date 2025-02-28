@@ -115,7 +115,7 @@ def build_indexing_pipeline(document_store, documents, model="sentence-transform
     pipeline.run({"doc_embedder": {"documents": documents}})
     return pipeline
 
-def build_rag_pipeline(document_store, persona_prompt: str, token_limit: int = 150,  text_embedder_model="sentence-transformers/all-MiniLM-L6-v2", llm_model="gpt-4o-mini"):
+def build_rag_pipeline(document_store, persona_prompt: str, token_limit: int = 150, text_embedder_model="sentence-transformers/all-MiniLM-L6-v2", llm_model="gpt-4o-mini"):
     
     template = [
         ChatMessage.from_system(
@@ -136,7 +136,7 @@ Answer:
     rag_pipe.add_component("embedder", SentenceTransformersTextEmbedder(model=text_embedder_model))
     rag_pipe.add_component("retriever", InMemoryEmbeddingRetriever(document_store=document_store))
     rag_pipe.add_component("prompt_builder", ChatPromptBuilder(template=template))
-    rag_pipe.add_component("llm", OpenAIChatGenerator(model=llm_model))
+    rag_pipe.add_component("llm", OpenAIChatGenerator(model=llm_model, max_tokens=token_limit))
     
     rag_pipe.connect("embedder.embedding", "retriever.query_embedding")
     rag_pipe.connect("retriever", "prompt_builder.documents")
