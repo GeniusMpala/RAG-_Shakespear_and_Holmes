@@ -64,34 +64,28 @@ def setup_openai_api():
         else:
             st.error("Missing OpenAI API Key in environment variables. Please add it to your Streamlit Secrets.")
 
+from transformers import GPT2Tokenizer
+
+# Initialize a tokenizer. Adjust if your LLM uses a different one.
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
 
-def generate_audio(character, text):
-    """
-    Generate audio using gTTS (Google Text-to-Speech) for the given character and text.
-    Returns MP3 audio bytes.
-    """
-    try:
-        # Create gTTS object
-        tts = gTTS(text)
+# Initialize a tokenizer. Adjust if your LLM uses a different one.
 
-        # Write to an in-memory buffer (BytesIO)
-        mp3_buffer = io.BytesIO()
-        tts.write_to_fp(mp3_buffer)
-        mp3_buffer.seek(0)
+def truncate_to_tokens(text, max_tokens=150):
+    tokens = tokenizer.encode(text)
+    truncated_tokens = tokens[:max_tokens]
+    return tokenizer.decode(truncated_tokens)
 
-        # Return raw MP3 bytes
-        return mp3_buffer.read()
 
-    except Exception as e:
-        st.warning(f"Text-to-speech failed: {e}")
-        return None
 
 
 
 # ---------------------------
 # Utility & Pipeline Setup Functions
 # ---------------------------
+
+
 def load_and_prepare_documents(file_path: str):
     with open(file_path, "r", encoding="utf-8") as f:
         text = f.read()
@@ -99,13 +93,12 @@ def load_and_prepare_documents(file_path: str):
     for chunk in text.split("\n\n"):
         content = chunk.strip()
         if content:
-            # Split the content into tokens (words) and take the first 150 tokens.
-            tokens = content.split()
-            truncated_content = " ".join(tokens[:150])
+            truncated_content = truncate_to_tokens(content, max_tokens=150)
             documents.append(Document(content=truncated_content))
-    # Deduplicate documents by ID (if needed)
+    # Optionally deduplicate documents by ID if necessary.
     unique_documents = list({doc.id: doc for doc in documents}.values())
     return unique_documents
+
 
 
 def initialize_document_store():
