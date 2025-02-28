@@ -5,3 +5,4 @@ torch
 transformers
 openai
 pyttsx3
+gTTS
