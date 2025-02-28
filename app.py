@@ -1,14 +1,34 @@
 import streamlit as st
 import os
+
 # ---------------------------
-# Ensure an asyncio event loop is running
+# Load environment variables from st.secrets
 # ---------------------------
 if "env_vars" in st.secrets:
     for key, value in st.secrets["env_vars"].items():
         os.environ[key] = value
 
+import asyncio
 import tempfile
-import pyttsx3
+
+# ---------------------------
+# Initialize pyttsx3 (with error handling)
+# ---------------------------
+try:
+    import pyttsx3
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    # Map characters to specific voice IDs. Adjust indices based on your system.
+    character_voices = {
+        "Sherlock Holmes": voices[0].id if voices else None,
+        "William Shakespeare": voices[1].id if len(voices) > 1 else (voices[0].id if voices else None),
+    }
+except RuntimeError as e:
+    st.warning("Text-to-speech is not available on this platform. Voice output is disabled.")
+    engine = None
+    voices = []
+    character_voices = {}
+
 from getpass import getpass
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
@@ -20,27 +40,29 @@ from haystack.dataclasses import ChatMessage
 from haystack.components.generators.chat import OpenAIChatGenerator
 from haystack.tools import Tool
 
-
-
-
-
+# ---------------------------
+# Ensure an asyncio event loop is running
+# ---------------------------
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    async def init_async():
+        return
+    loop.run_until_complete(init_async())
 
 # ---------------------------
-# Initialize pyttsx3 and set up voices for each character
+# Generate audio function (returns None if TTS is disabled)
 # ---------------------------
-engine = pyttsx3.init()
-voices = engine.getProperty('voices')
-# Map characters to specific voice IDs. Adjust indices based on your system.
-character_voices = {
-    "Sherlock Holmes": voices[0].id if voices else None,
-    "William Shakespeare": voices[1].id if len(voices) > 1 else (voices[0].id if voices else None),
-}
-
 def generate_audio(character, text):
     """
     Generate audio using pyttsx3 for the given character and text.
-    Returns the audio bytes in WAV format.
+    Returns the audio bytes in WAV format, or None if TTS is unavailable.
     """
+    if engine is None:
+        return None
+
     # Set voice for the character if available, otherwise default to the first voice.
     if character in character_voices and character_voices[character]:
         engine.setProperty('voice', character_voices[character])
@@ -48,14 +70,14 @@ def generate_audio(character, text):
         engine.setProperty('voice', voices[0].id)
     
     # Reduce the voice speed by setting a lower rate (default is typically around 200)
-    engine.setProperty('rate', 150)  # Adjust this value to further reduce or increase speed
+    engine.setProperty('rate', 150)  # Adjust as needed
     
     # Create a temporary file for the audio output
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
         tmp_filename = f.name
-    
+
     engine.save_to_file(text, tmp_filename)
-    engine.runAndWait()  # Wait for the speech synthesis to complete
+    engine.runAndWait()  # Wait for speech synthesis to complete
     
     # Read the audio data from the file and then remove it
     with open(tmp_filename, "rb") as f:
@@ -69,7 +91,7 @@ def generate_audio(character, text):
 def setup_openai_api():
     if "OPENAI_API_KEY" not in os.environ:
         # Replace with your API key or use getpass to securely input it.
-        os.environ["OPENAI_API_KEY"] = "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"
+        os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
 def load_and_prepare_documents(file_path: str):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -257,14 +279,13 @@ if voice_enabled:
     last_speaker, last_message = st.session_state.conversation[-1]
     st.markdown("**Voice Output:**")
     audio_bytes = generate_audio(last_speaker, last_message)
-    st.audio(audio_bytes, format="audio/wav")
+    if audio_bytes:
+        st.audio(audio_bytes, format="audio/wav")
+    else:
+        st.write("Voice output unavailable.")
 
 if st.button("Next Turn"):
     st.session_state.conversation = next_turn(
         st.session_state.conversation, sherlock_tool, shakespeare_tool
     )
     st.rerun()
-
-
-
-
